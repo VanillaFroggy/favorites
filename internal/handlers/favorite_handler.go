@@ -1,7 +1,7 @@
-package handler
+package handlers
 
 import (
-	"favorites/internal/handler/dto"
+	"favorites/internal/handlers/dto"
 	"favorites/internal/models/favorite"
 	"favorites/internal/repository"
 	"github.com/gin-gonic/gin"

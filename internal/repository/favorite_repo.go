@@ -21,17 +21,18 @@ func (r *FavoriteRepository) GetAllFavorites() ([]favorite.Favorite, error) {
 	return favorites, err
 }
 
-func (r *FavoriteRepository) CreateFavorite(favorite *favorite.Favorite) error {
+func (r *FavoriteRepository) CreateFavorite(fav *favorite.Favorite) error {
 	query := `INSERT INTO favorites (project_id, owner_type, owner_id, object_id, object_type)
-	          VALUES (:project_id, :owner_type, :owner_id, :object_id, :object_type)
+	          VALUES ($1, $2, $3, $4, $5)
 	          RETURNING id, project_id, owner_type, owner_id, object_id, object_type, created_at;`
-	err := r.db.QueryRowx(query,
-		favorite.ProjectID,
-		favorite.OwnerType,
-		favorite.OwnerID,
-		favorite.ObjectID,
-		favorite.ObjectType,
-	).StructScan(&favorite)
+	err := r.db.QueryRowx(
+		query,
+		fav.ProjectID,
+		fav.OwnerType,
+		fav.OwnerID,
+		fav.ObjectID,
+		fav.ObjectType,
+	).StructScan(fav)
 	return err
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,7 +14,7 @@ func RunMigrations(db *sqlx.DB) {
 		panic(err)
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://internal/db/migrations",
+		"file:///app/internal/db/migrations",
 		"postgres", driver)
 	if err != nil {
 		panic(err)

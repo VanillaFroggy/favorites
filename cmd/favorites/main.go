@@ -2,7 +2,7 @@ package main
 
 import (
 	"favorites/internal/db"
-	"favorites/internal/handler"
+	"favorites/internal/handlers"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"os"
@@ -19,11 +19,9 @@ func main() {
 			panic(err)
 		}
 	}(dbConn)
-	if len(os.Args) > 1 && os.Args[1] == "migrate" {
-		db.RunMigrations(dbConn)
-	}
+	db.RunMigrations(dbConn)
 	r := gin.Default()
-	handler.RegisterRoutes(dbConn, r)
+	handlers.RegisterRoutes(dbConn, r)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

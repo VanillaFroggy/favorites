@@ -3,16 +3,16 @@ package favorite
 type OwnerType string
 
 const (
-	OwnerTypeUser  OwnerType = "user"
-	OwnerTypeGroup OwnerType = "group"
+	OwnerTypeUser  OwnerType = "USER"
+	OwnerTypeGroup OwnerType = "GROUP"
 )
 
 type ObjectType string
 
 const (
-	ObjectTypeDocument ObjectType = "document"
-	ObjectTypeImage    ObjectType = "image"
-	ObjectTypeVideo    ObjectType = "video"
+	ObjectTypeDocument ObjectType = "DOCUMENT"
+	ObjectTypeImage    ObjectType = "IMAGE"
+	ObjectTypeVideo    ObjectType = "VIDEO"
 )
 
 func IsValidOwnerType(ownerType string) bool {
