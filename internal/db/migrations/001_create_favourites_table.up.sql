@@ -10,6 +10,6 @@ CREATE TABLE IF NOT EXISTS favorites
 );
 
 CREATE INDEX IF NOT EXISTS idx_favorites_project_id ON favorites (project_id);
-CREATE INDEX IF NOT EXISTS idx_favorites_owner ON favorites (owner_id, owner_type);
-CREATE INDEX IF NOT EXISTS idx_favorites_object ON favorites (object_id, object_type);
+CREATE INDEX IF NOT EXISTS idx_favorites_owner ON favorites (owner_type, owner_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_object ON favorites (object_type, object_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_created_at ON favorites (created_at);

@@ -19,7 +19,10 @@ func main() {
 			panic(err)
 		}
 	}(dbConn)
-	db.RunMigrations(dbConn)
+	err = db.RunMigrations(dbConn, "file:///app/internal/db/migrations")
+	if err != nil {
+		panic(err)
+	}
 	r := gin.Default()
 	handlers.RegisterRoutes(dbConn, r)
 	port := os.Getenv("PORT")

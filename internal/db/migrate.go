@@ -8,13 +8,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func RunMigrations(db *sqlx.DB) {
+func RunMigrations(db *sqlx.DB, migrationPath string) error {
 	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
 		panic(err)
 	}
 	m, err := migrate.NewWithDatabaseInstance(
-		"file:///app/internal/db/migrations",
+		migrationPath,
 		"postgres", driver)
 	if err != nil {
 		panic(err)
@@ -22,4 +22,5 @@ func RunMigrations(db *sqlx.DB) {
 	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		panic(err)
 	}
+	return nil
 }

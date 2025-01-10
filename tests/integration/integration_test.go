@@ -2,13 +2,18 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"favorites/internal/db"
 	"favorites/internal/handlers"
 	"favorites/internal/models/favorite"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -21,46 +26,88 @@ var testDB *sqlx.DB
 var router *gin.Engine
 
 func TestMain(m *testing.M) {
-	var err error
-	testDB, err = sqlx.Connect("postgres", os.Getenv("TEST_DB_URL"))
+	ctx := context.Background()
+	envFile, err := godotenv.Read("../../deploy/.env")
+	req := testcontainers.ContainerRequest{
+		Image:        "postgres:15-alpine",
+		ExposedPorts: []string{"5432/tcp"},
+		Env: map[string]string{
+			"POSTGRES_USER":     envFile["DATABASE_USER"],
+			"POSTGRES_PASSWORD": envFile["DATABASE_PASSWORD"],
+			"POSTGRES_DB":       envFile["DATABASE_NAME"],
+		},
+		WaitingFor: wait.ForListeningPort("5432/tcp"),
+	}
+	postgresContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
 	if err != nil {
 		panic(err)
 	}
-	db.RunMigrations(testDB)
+	host, _ := postgresContainer.Host(ctx)
+	mappedPort, _ := postgresContainer.MappedPort(ctx, "5432/tcp")
+	dbURL := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		envFile["DATABASE_USER"],
+		envFile["DATABASE_PASSWORD"],
+		host, mappedPort.Port(),
+		envFile["DATABASE_NAME"],
+	)
+	testDB, err = sqlx.Connect("postgres", dbURL)
+	if err != nil {
+		panic(err)
+	}
+	err = db.RunMigrations(testDB, "file://../../internal/db/migrations")
+	if err != nil {
+		panic(err)
+	}
 	router = gin.Default()
 	handlers.RegisterRoutes(testDB, router)
 	code := m.Run()
 	_ = testDB.Close()
+	_ = postgresContainer.Terminate(ctx)
 	os.Exit(code)
 }
 
 func clearDB() {
 	_, err := testDB.Exec("TRUNCATE TABLE favorites RESTART IDENTITY CASCADE")
 	if err != nil {
-		return
+		panic(err)
 	}
 }
 
 func TestGetFavorites(t *testing.T) {
 	clearDB()
-	_, err := testDB.Exec(`
+	var ownerID uuid.UUID
+	err := testDB.QueryRowx(`
 		INSERT INTO favorites (id, project_id, owner_type, owner_id, object_id, object_type, created_at)
-		VALUES
-			(gen_random_uuid(), gen_random_uuid(), 'USER', gen_random_uuid(), gen_random_uuid(), 'IMAGE', NOW())
-	`)
+		VALUES (gen_random_uuid(), gen_random_uuid(), 'USER', gen_random_uuid(), gen_random_uuid(), 'IMAGE', NOW())
+		RETURNING owner_id;
+	`).Scan(&ownerID)
 	if err != nil {
 		t.Fatalf("Failed to insert test data: %v", err)
+		return
 	}
 	req := httptest.NewRequest(http.MethodGet, "/favorites", nil)
+	urlQuery := req.URL.Query()
+	urlQuery.Add("owner_type", "USER")
+	urlQuery.Add("owner_id", ownerID.String())
+	urlQuery.Add("limit", "25")
+	urlQuery.Add("offset", "0")
+	req.URL.RawQuery = urlQuery.Encode()
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+		t.Errorf("Error message: %s", w.Body)
+		return
 	}
 	var favorites []favorite.Favorite
 	err = json.Unmarshal(w.Body.Bytes(), &favorites)
 	if err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
+		return
 	}
 	if len(favorites) != 1 {
 		t.Errorf("Expected 1 favorite, got %d", len(favorites))
@@ -84,6 +131,7 @@ func TestCreateFavorite(t *testing.T) {
 	if w.Code != http.StatusCreated {
 		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
 		t.Errorf("Error message: %s", w.Body)
+		return
 	}
 	var count int
 	err := testDB.Get(&count, "SELECT COUNT(*) FROM favorites")

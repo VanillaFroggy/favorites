@@ -15,7 +15,6 @@ services:
       DATABASE_URL: ${DATABASE_URL}
     depends_on:
       - db
-      - test
     networks:
       - app-network
   db:
@@ -32,32 +31,6 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - app-network
-  test-db:
-    image: postgres:15
-    env_file:
-      - .env.example
-    environment:
-      POSTGRES_USER: ${TEST_DB_USER}
-      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD}
-      POSTGRES_DB: ${TEST_DB_NAME}
-    ports:
-      - "5433:5432"
-    networks:
-      - app-network
-  test:
-    build:
-      context: ../
-      dockerfile: deploy/Dockerfile
-      target: test-runner
-    env_file:
-      - .env.example
-    environment:
-      TEST_DB_URL: ${TEST_DB_URL}
-    networks:
-      - app-network
-    depends_on:
-      - test-db
-    entrypoint: [ "sh", "-c", "go test -v ./..." ]
 
 networks:
   app-network:
