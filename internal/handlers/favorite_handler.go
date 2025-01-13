@@ -5,7 +5,6 @@ import (
 	"favorites/internal/handlers/dto"
 	"favorites/internal/models/favorite"
 	"favorites/internal/repository"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -41,7 +40,7 @@ func RegisterRoutes(db *sqlx.DB, r *gin.Engine) {
 // @Router        /favorites [get]
 func GetFavorites(c *gin.Context) {
 	if !favorite.IsValidOwnerType(c.Query("owner_type")) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Incorrect owner_type '%s', correct is '%s'", c.Query("owner_type"), favorite.OwnerTypeUser)})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Incorrect owner_type"})
 		return
 	}
 	ownerType := favorite.OwnerType(c.Query("owner_type"))
