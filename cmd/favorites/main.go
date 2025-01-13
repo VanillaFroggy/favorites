@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "favorites/docs"
 	"favorites/internal/db"
 	"favorites/internal/handlers"
 	"github.com/gin-gonic/gin"
@@ -8,6 +9,11 @@ import (
 	"os"
 )
 
+// @title			Favorites API
+// @version		1.0
+// @description	A favorites management service API in Go using Gin framework.
+// @host			localhost:8080
+// @BasePath		/favorites
 func main() {
 	dbConn, err := db.ConnectDB()
 	if err != nil {

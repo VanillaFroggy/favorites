@@ -1,0 +1,171 @@
+basePath: /favorites
+definitions:
+  favorites_internal_handlers_dto.CreateFavoriteRequest:
+    properties:
+      object_id:
+        type: string
+      object_type:
+        type: string
+      owner_id:
+        type: string
+      owner_type:
+        type: string
+      project_id:
+        type: string
+    required:
+    - object_id
+    - object_type
+    - owner_id
+    - owner_type
+    - project_id
+    type: object
+  favorites_internal_models_favorite.Favorite:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      object_id:
+        type: string
+      object_type:
+        $ref: '#/definitions/favorites_internal_models_favorite.ObjectType'
+      owner_id:
+        type: string
+      owner_type:
+        $ref: '#/definitions/favorites_internal_models_favorite.OwnerType'
+      project_id:
+        type: string
+    type: object
+  favorites_internal_models_favorite.ObjectType:
+    enum:
+    - DOCUMENT
+    - IMAGE
+    - VIDEO
+    type: string
+    x-enum-varnames:
+    - ObjectTypeDocument
+    - ObjectTypeImage
+    - ObjectTypeVideo
+  favorites_internal_models_favorite.OwnerType:
+    enum:
+    - USER
+    - GROUP
+    type: string
+    x-enum-varnames:
+    - OwnerTypeUser
+    - OwnerTypeGroup
+  gin.H:
+    additionalProperties: {}
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: A favorites management service API in Go using Gin framework.
+  title: Favorites API
+  version: "1.0"
+paths:
+  /favorites:
+    get:
+      description: Responds with the page of favorites by owner_type, owner_id, limit
+        and offset as JSON.
+      parameters:
+      - description: type of owner
+        enum:
+        - USER
+        - GROUP
+        in: query
+        name: owner_type
+        required: true
+        type: string
+      - description: ID of owner in uuid format
+        in: query
+        name: owner_id
+        required: true
+        type: string
+      - description: size of page
+        in: query
+        name: limit
+        required: true
+        type: number
+      - description: count of entries to skip before page
+        in: query
+        name: offset
+        required: true
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/favorites_internal_models_favorite.Favorite'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Get favorites array
+      tags:
+      - favorites
+    post:
+      description: Creates a new favorite entry and responses with it as JSON.
+      parameters:
+      - description: Favorite to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/favorites_internal_handlers_dto.CreateFavoriteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/favorites_internal_models_favorite.Favorite'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Create new favorite
+      tags:
+      - favorites
+  /favorites/id:
+    delete:
+      description: Deletes favorite entry and responses with NoContent Code.
+      parameters:
+      - description: ID of favorite to delete in uuid format
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      summary: Delete favorite by id
+      tags:
+      - favorites
+swagger: "2.0"
