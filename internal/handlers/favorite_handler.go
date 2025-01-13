@@ -83,8 +83,14 @@ func GetFavorites(c *gin.Context) {
 // @Router        /favorites [post]
 func CreateFavorite(c *gin.Context) {
 	var request dto.CreateFavoriteRequest
-	if err := c.ShouldBind(&request); err != nil || !favorite.IsValidObjectType(request.ObjectType) || !favorite.IsValidOwnerType(request.OwnerType) {
+	if err := c.ShouldBind(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	} else if !favorite.IsValidObjectType(request.ObjectType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Incorrect object_type"})
+		return
+	} else if !favorite.IsValidOwnerType(request.OwnerType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Incorrect owner_type"})
 		return
 	}
 	fav := favorite.Favorite{
