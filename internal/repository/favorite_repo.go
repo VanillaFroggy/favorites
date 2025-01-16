@@ -14,23 +14,44 @@ func NewFavoriteRepository(db *sqlx.DB) *FavoriteRepository {
 	return &FavoriteRepository{db: db}
 }
 
-func (r *FavoriteRepository) GetAllFavorites(ownerType favorite.OwnerType, ownerID uuid.UUID, limit uint64, offset uint64) ([]favorite.Favorite, error) {
+func (r *FavoriteRepository) GetPageOfFavoritesByOwnerTypeAndOwnerID(
+	ownerType favorite.OwnerType,
+	ownerID uuid.UUID,
+	limit uint64,
+	cursorID uuid.UUID,
+) ([]favorite.Favorite, uuid.UUID, error) {
 	var favorites []favorite.Favorite
-	query := `SELECT *
-			  FROM favorites
-			  WHERE owner_type = $1 AND owner_id = $2
-			  GROUP BY owner_type, owner_id, id
-			  ORDER BY created_at DESC
-			  LIMIT $3 OFFSET $4;`
-	err := r.db.Select(
-		&favorites,
-		query,
-		ownerType,
-		ownerID,
-		limit,
-		offset,
-	)
-	return favorites, err
+	var args []interface{}
+	query := `
+		SELECT *
+		FROM favorites
+		WHERE owner_type = $1
+		  AND owner_id = $2
+	`
+	args = append(args, ownerType, ownerID)
+	if cursorID != uuid.Nil {
+		query += `
+			AND created_at < (SELECT created_at FROM favorites WHERE id = $3)
+			ORDER BY created_at DESC
+			LIMIT $4
+		`
+		args = append(args, cursorID)
+	} else {
+		query += `
+			ORDER BY created_at DESC
+			LIMIT $3
+		`
+	}
+	args = append(args, limit)
+	err := r.db.Select(&favorites, query, args...)
+	if err != nil {
+		return nil, uuid.Nil, err
+	}
+	var nextCursor uuid.UUID
+	if len(favorites) > 0 {
+		nextCursor = favorites[len(favorites)-1].ID
+	}
+	return favorites, nextCursor, err
 }
 
 func (r *FavoriteRepository) CreateFavorite(f *favorite.Favorite) error {

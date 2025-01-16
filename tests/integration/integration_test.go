@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"favorites/internal/db"
 	"favorites/internal/handlers"
@@ -79,12 +80,13 @@ func clearDB() {
 
 func TestGetFavorites(t *testing.T) {
 	clearDB()
+	var id uuid.UUID
 	var ownerID uuid.UUID
 	err := testDB.QueryRowx(`
 		INSERT INTO favorites (id, project_id, owner_type, owner_id, object_id, object_type, created_at)
 		VALUES (gen_random_uuid(), gen_random_uuid(), 'USER', gen_random_uuid(), gen_random_uuid(), 'IMAGE', NOW())
-		RETURNING owner_id;
-	`).Scan(&ownerID)
+		RETURNING id, owner_id;
+	`).Scan(&id, &ownerID)
 	if err != nil {
 		t.Fatalf("Failed to insert test data: %v", err)
 		return
@@ -94,13 +96,31 @@ func TestGetFavorites(t *testing.T) {
 	urlQuery.Add("owner_type", "USER")
 	urlQuery.Add("owner_id", ownerID.String())
 	urlQuery.Add("limit", "25")
-	urlQuery.Add("offset", "0")
+	urlQuery.Add("cursor", "")
 	req.URL.RawQuery = urlQuery.Encode()
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
 		t.Errorf("Error message: %s", w.Body)
+		return
+	}
+	cursorBase64 := w.Header()["X-Next-Cursor"][0]
+	if cursorBase64 == "" {
+		t.Errorf("Error message: %s", "cursor is nil")
+		return
+	}
+	decodedCursor, err := base64.URLEncoding.DecodeString(cursorBase64)
+	if err != nil {
+		t.Errorf("Error message: %s", w.Body)
+		return
+	}
+	cursorID, err := uuid.Parse(string(decodedCursor))
+	if err != nil {
+		t.Errorf("Error message: %s", w.Body)
+		return
+	} else if id != cursorID {
+		t.Errorf("Error message: %s", "ids are not equal")
 		return
 	}
 	var favorites []favorite.Favorite

@@ -52,9 +52,9 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "number",
-                        "description": "count of entries to skip before page",
-                        "name": "offset",
+                        "type": "string",
+                        "description": "last id of previous page in base64 format",
+                        "name": "cursor",
                         "in": "query",
                         "required": true
                     }

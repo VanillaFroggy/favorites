@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/base64"
 	_ "favorites/docs"
 	"favorites/internal/handlers/dto"
 	"favorites/internal/models/favorite"
@@ -32,7 +33,7 @@ func RegisterRoutes(db *sqlx.DB, r *gin.Engine) {
 // @Param		  owner_type  query    favorite.OwnerType  true  "type of owner"
 // @Param		  owner_id  query    string  true  "ID of owner in uuid format"
 // @Param		  limit  query    number  true  "size of page"
-// @Param		  offset  query    number  true  "count of entries to skip before page"
+// @Param		  cursor  query   string  true  "last id of previous page in base64 format"
 // @Success       200  {array}  favorite.Favorite
 // @Failure       400       {object}  gin.H
 // @Failure       404       {object}  gin.H
@@ -44,22 +45,31 @@ func GetFavorites(c *gin.Context) {
 		return
 	}
 	ownerType := favorite.OwnerType(c.Query("owner_type"))
-	ownerId, err := uuid.Parse(c.Query("owner_id"))
+	ownerID, err := uuid.Parse(c.Query("owner_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	limit, err := strconv.ParseUint(c.Query("limit"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err != nil || limit == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
 		return
 	}
-	offset, err := strconv.ParseUint(c.Query("offset"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	cursorBase64 := c.Query("cursor")
+	var cursorID uuid.UUID
+	if cursorBase64 != "" {
+		decodedCursor, err := base64.URLEncoding.DecodeString(cursorBase64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid cursor"})
+			return
+		}
+		cursorID, err = uuid.Parse(string(decodedCursor))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
-	favorites, err := repo.GetAllFavorites(ownerType, ownerId, limit, offset)
+	favorites, nextCursor, err := repo.GetPageOfFavoritesByOwnerTypeAndOwnerID(ownerType, ownerID, limit, cursorID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -68,6 +78,11 @@ func GetFavorites(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No favorites found"})
 		return
 	}
+	var encodedCursor string
+	if nextCursor != uuid.Nil {
+		encodedCursor = base64.URLEncoding.EncodeToString([]byte(nextCursor.String()))
+	}
+	c.Header("X-Next-Cursor", encodedCursor)
 	c.JSON(http.StatusOK, favorites)
 }
 

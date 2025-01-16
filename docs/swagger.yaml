@@ -87,11 +87,11 @@ paths:
         name: limit
         required: true
         type: number
-      - description: count of entries to skip before page
+      - description: last id of previous page in base64 format
         in: query
-        name: offset
+        name: cursor
         required: true
-        type: number
+        type: string
       produces:
       - application/json
       responses:
