@@ -7,8 +7,8 @@ import (
 	"net/http"
 )
 
-func ParseUUIDFromBase64(c *gin.Context) (uuid.UUID, error) {
-	cursorBase64 := c.Query("cursor")
+func ParseUUIDFromBase64(c *gin.Context, key string) (uuid.UUID, error) {
+	cursorBase64 := c.Query(key)
 	var cursorID uuid.UUID
 	if cursorBase64 != "" {
 		decodedCursor, err := base64.URLEncoding.DecodeString(cursorBase64)

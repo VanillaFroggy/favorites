@@ -56,7 +56,7 @@ func GetFavorites(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
 		return
 	}
-	cursorID, err := httputil.ParseUUIDFromBase64(c)
+	cursorID, err := httputil.ParseUUIDFromBase64(c, "cursor")
 	if err != nil {
 		return
 	}
