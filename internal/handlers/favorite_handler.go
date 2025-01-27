@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	_ "favorites/docs"
 	"favorites/internal/handlers/dto"
+	"favorites/internal/handlers/httputil"
 	"favorites/internal/models/favorite"
 	"favorites/internal/repository"
 	"github.com/gin-gonic/gin"
@@ -55,19 +56,9 @@ func GetFavorites(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
 		return
 	}
-	cursorBase64 := c.Query("cursor")
-	var cursorID uuid.UUID
-	if cursorBase64 != "" {
-		decodedCursor, err := base64.URLEncoding.DecodeString(cursorBase64)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid cursor"})
-			return
-		}
-		cursorID, err = uuid.Parse(string(decodedCursor))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	cursorID, err := httputil.ParseUUIDFromBase64(c)
+	if err != nil {
+		return
 	}
 	favorites, nextCursor, err := repo.GetPageOfFavoritesByOwnerTypeAndOwnerID(ownerType, ownerID, limit, cursorID)
 	if err != nil {
